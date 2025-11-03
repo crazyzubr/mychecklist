@@ -31,6 +31,12 @@
       color: gray;
     }
 
+    .drop-target {
+      background-color: #f0f8ff;
+      border: 2px dashed #3399ff;
+    }
+
+
   </style>
 </head>
 <body>
@@ -39,90 +45,174 @@
   {% load dict_extras %} <!-- загрузка фильтра get_item -->
 
   {% for priority in priorities %}
-    <div class="column" data-priority-id="{{ priority.id }}" style="flex: 1; border: 1px solid #ccc; padding: 10px;">
-      <h2>{{ priority.name }}</h2>
-      <button class="add-btn">+</button>
-      <div class="add-form" style="display:none; margin-top:10px;">
-        <input type="text" placeholder="Текст" class="text-input"><br>
-        <input type="date" class="date-input"><br>
-        <button class="save-btn">Сохранить</button>
-        <button class="cancel-btn">Отмена</button>
+      <div class="column" data-priority-id="{{ priority.id }}" style="flex: 1; border: 1px solid #ccc; padding: 10px;">
+        <h2>{{ priority.name }}</h2>
+        <button class="add-btn">+</button>
+        <div class="add-form" style="display:none; margin-top:10px;">
+          <input type="text" placeholder="Текст" class="text-input"><br>
+          <input type="date" class="date-input"><br>
+          <button class="save-btn">Сохранить</button>
+          <button class="cancel-btn">Отмена</button>
+        </div>
+
+        <div class="items" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragleave="onDragLeave(event)" style="min-height: 40px;">
+          {% for item in items_by_priority|get_item:priority.id %}
+            <div class="item" draggable="true" data-id="{{ item.id }}" style="display: flex; align-items: center; white-space: nowrap; gap: 8px; margin-bottom: 6px;">
+              <span class="item-index" style="color: #ccc; user-select: none; width: 20px; text-align: right; flex-shrink: 0;">
+                {{ forloop.counter }}.
+              </span>
+              <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
+              <span class="item-text{% if item.completed %} completed{% endif %}" style="{% if item.completed %}text-decoration: line-through; color: gray;{% endif %}">
+                {{ item.text }} ({{ item.planned_date }})
+              </span>
+              <button class="remove-btn" style="flex-shrink: 0;">-</button>
+            </div>
+          {% empty %}
+              <p class="empty-message" style="color: #888; font-style: italic; display: none;">(Пусто)</p>
+          {% endfor %}
+        </div>
       </div>
 
-      <div class="items">
-        {% for item in items_by_priority|get_item:priority.id %}
-        <div class="item" draggable="true" data-id="{{ item.id }}" style="display: flex; align-items: center; white-space: nowrap; gap: 8px; margin-bottom: 6px;">
-          <span class="item-index" style="color: #ccc; user-select: none; width: 20px; text-align: right; flex-shrink: 0;">{{ forloop.counter }}.</span>
-          <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
-          <span class="item-text{% if item.completed %} completed{% endif %}">{{ item.text }} ({{ item.planned_date }})</span>
-          <button class="remove-btn" style="flex-shrink: 0;">-</button>
-        </div>
-        {% empty %}
-            <p><i>(Пусто)</i></p>
-        {% endfor %}
-      </div>
-    </div>
   {% endfor %}
 </div>
 
 
 <script>
-    let draggedItem = null; // Сохраняем перетаскиваемый элемент
+    // Переменная для текущего перетаскиваемого элемента
+    let draggedItem = null;
+
+    function onDragOver(event) {
+      event.preventDefault();
+      const container = event.currentTarget;
+      container.classList.add('drop-target');
+    }
+
+    function onDragLeave(event) {
+      const container = event.currentTarget;
+      container.classList.remove('drop-target');
+    }
+
+    function onDrop(event) {
+      event.preventDefault();
+      const container = event.currentTarget;
+      container.classList.remove('drop-target');
+
+      const draggedItemId = event.dataTransfer.getData('text/plain');
+      const draggedItem = document.querySelector(`.item[data-id='${draggedItemId}']`);
+      if(!draggedItem) return;
+
+      // Вставляем элемент в эту пустую колонку
+      container.appendChild(draggedItem);
+
+      // Обновляем индексы в этой и других колонках
+      updateIndices();
+
+      // Обновляем отображение пустого сообщения
+      updateEmptyMessage(container);
+
+      // Отправляем запрос на сервер с новым приоритетом и позицией
+      const newPriorityId = container.closest('.column').dataset.priorityId;
+      const newOrder = Array.from(container.children).indexOf(draggedItem);
+
+      fetch('/api/checklist/item/move', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({id: draggedItemId, priority: newPriorityId, order: newOrder})
+      });
+    }
+
 
     document.querySelectorAll('.item').forEach(item => {
       item.addEventListener('dragstart', (e) => {
         draggedItem = item;
+        item.classList.add('dragging');  // выделяем только этот элемент
+
         e.dataTransfer.effectAllowed = 'move';
-        setTimeout(() => item.style.display = 'none', 0); // Скрыть элемент пока тянут
+        e.dataTransfer.setData('text/plain', item.dataset.id);
+
+        setTimeout(() => item.style.display = 'none', 0);
       });
 
       item.addEventListener('dragend', () => {
-        draggedItem.style.display = 'flex';
-        draggedItem = null;
-      });
-
-      item.addEventListener('dragover', (e) => {
-        e.preventDefault(); // Разрешаем сброс
-        e.dataTransfer.dropEffect = 'move';
-      });
-
-      item.addEventListener('drop', (e) => {
-        e.preventDefault();
-        if (draggedItem && draggedItem !== item) {
-          const parent = item.parentNode;
-          // Вставить draggedItem перед item
-          parent.insertBefore(draggedItem, item);
-
-          updateIndices(); // Обновить нумерацию после перестановки
-
-          // Здесь нужно отправить на сервер обновленную позицию и колонку draggedItem через fetch к DRF API
-          const movedItemId = draggedItem.dataset.id;
-          const newPriorityId = parent.closest('.column').dataset.priorityId;
-          // Дополнительно можно передать индекс (порядок) в новой колонке
-          const newOrder = Array.from(parent.children).indexOf(draggedItem);
-
-          fetch('/api/checklist/item/move', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({id: movedItemId, priority: newPriorityId, order: newOrder})
-          });
+        if(draggedItem) {
+          draggedItem.classList.remove('dragging');
+          draggedItem.style.display = 'flex';
+          draggedItem = null;
         }
       });
     });
+
+
+    // Dragover/drop на контейнере с элементами
+    document.querySelectorAll('.items').forEach(container => {
+      container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        container.classList.add('drop-target');  // выделение контейнера для ясности
+      });
+      container.addEventListener('dragleave', () => {
+        container.classList.remove('drop-target');
+      });
+      container.addEventListener('drop', (e) => {
+        e.preventDefault();
+        container.classList.remove('drop-target');
+
+        const draggedId = e.dataTransfer.getData('text/plain');
+        const draggedElem = document.querySelector(`.item[data-id='${draggedId}']`);
+        if (!draggedElem) return;
+
+        // Добавляем элемент в контейнер
+        container.appendChild(draggedElem);
+
+        updateIndices();
+        updateEmptyMessage(container);
+
+        // Отправляем update на сервер
+        const newPriorityId = container.closest('.column').dataset.priorityId;
+        const newOrder = Array.from(container.children).indexOf(draggedElem);
+
+        fetch('/api/checklist/item/move', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({id: draggedId, priority: newPriorityId, order: newOrder})
+        });
+      });
+    });
+
+    // Обновление пустого сообщения
+    function updateEmptyMessage(container) {
+      if (!container) return; // защита от null
+      const emptyMsg = container.querySelector('.empty-message');
+      if (!emptyMsg) return; // если нет элемента с сообщением — выйти
+      const itemsCount = container.querySelectorAll('.item').length;
+      if (itemsCount === 0) {
+        emptyMsg.style.display = 'block';
+      } else {
+        emptyMsg.style.display = 'none';
+      }
+    }
+
+
+    // Обновление нумерации
     function updateIndices() {
       document.querySelectorAll('.column').forEach(column => {
         const items = column.querySelectorAll('.item');
-        items.forEach((item, index) => {
-          const indexElem = item.querySelector('.item-index');
-          if (indexElem) {
-            indexElem.textContent = (index + 1) + '.';
-          }
+        items.forEach((item, i) => {
+          const indexSpan = item.querySelector('.item-index');
+          if (indexSpan) indexSpan.textContent = (i + 1) + '.';
         });
       });
     }
+    // Вызовем при загрузке страницы и после любых манипуляций с элементами
+    document.querySelectorAll('.items').forEach(updateEmptyMessage);
+    updateIndices();
+
+
     window.addEventListener('load', () => {
       updateIndices();
     });
