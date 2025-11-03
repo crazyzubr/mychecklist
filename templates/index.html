@@ -5,82 +5,109 @@
   <meta charset="UTF-8">
   <title>Чеклист</title>
   <style>
-    .container { display: flex; }
-    .column { flex: 1; margin: 0 10px; border: 1px solid #ccc; padding: 10px; }
-    .completed { text-decoration: line-through; color: gray; }
-    .item { margin-bottom: 5px; }
+      .container {
+        display: flex;
+        gap: 20px;
+      }
 
-    .item {
-      display: flex;
-      align-items: center;
-      white-space: nowrap; /* Запрет переноса */
-      gap: 8px; /* Расстояние между элементами */
-      margin-bottom: 6px;
-    }
+      .column {
+        flex: 1;
+        margin: 0 10px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        box-sizing: border-box;
+      }
 
-    .item-index {
-      color: #ccc; /* Серый цвет */
-      user-select: none; /* Чтобы не выделялся */
-      width: 20px;
-      text-align: right;
-      flex-shrink: 0; /* Индекс всегда занимает место */
-    }
+      .completed {
+        text-decoration: line-through;
+        color: gray;
+      }
 
-    .item-text.completed {
-      text-decoration: line-through;
-      color: gray;
-    }
+      .item {
+        display: flex;
+        align-items: center;
+        white-space: nowrap; /* Запрет переноса */
+        gap: 8px; /* Расстояние между элементами */
+        margin-bottom: 6px;
+      }
 
-    .drop-target {
-      background-color: #f0f8ff;
-      border: 2px dashed #3399ff;
-    }
+      .item-index {
+        color: #ccc; /* Серый цвет */
+        user-select: none; /* Чтобы не выделялся */
+        width: 20px;
+        text-align: right;
+        flex-shrink: 0; /* Индекс всегда занимает место */
+      }
 
-    .dragging {
-      opacity: 0.5;
-      border: 2px solid #3399ff;
-    }
+      .item-text.completed {
+        text-decoration: line-through;
+        color: gray;
+      }
 
+      .drop-target {
+        background-color: #f0f8ff;
+        border: 2px dashed #3399ff;
+      }
 
+      .dragging {
+        opacity: 0.5;
+        border: 2px solid #3399ff;
+      }
+
+      .add-form {
+        margin-top: 10px;
+        display: none;
+      }
+
+      .text-input, .date-input {
+        display: block;
+        margin-bottom: 5px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .empty-message {
+        color: #888;
+        font-style: italic;
+        display: none;
+      }
+
+      .remove-btn {
+        flex-shrink: 0;
+      }
 
   </style>
 </head>
 <body>
 
-<div class="container" style="display: flex; gap: 20px;">
+<div class="container">
   {% for priority in priorities %}
-    <div class="column" data-priority-id="{{ priority.id }}" style="flex: 1; border: 1px solid #ccc; padding: 10px;">
+    <div class="column" data-priority-id="{{ priority.id }}" data-priority-level="{{ priority.level }}">
       <h2>{{ priority.name }}</h2>
       <button class="add-btn">+</button>
-      <div class="add-form" style="display:none; margin-top:10px;">
-        <input type="text" placeholder="Текст" class="text-input"><br>
-        <input type="date" class="date-input"><br>
+      <div class="add-form">
+        <input type="text" placeholder="Текст" class="text-input">
+        <input type="date" class="date-input">
         <button class="save-btn">Сохранить</button>
         <button class="cancel-btn">Отмена</button>
       </div>
 
       <div class="items" style="min-height: 40px;">
         {% for item in items_by_priority|get_item:priority.id %}
-          <div class="item" draggable="true" data-id="{{ item.id }}" style="display: flex; align-items: center; white-space: nowrap; gap: 8px; margin-bottom: 6px;">
-            <span class="item-index" style="color: #ccc; user-select: none; width: 20px; text-align: right; flex-shrink: 0;">
-              {{ forloop.counter }}.
-            </span>
+          <div class="item{% if item.completed %} completed{% endif %}" draggable="true" data-id="{{ item.id }}">
+            <span class="item-index">{{ forloop.counter }}.</span>
             <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
-            <span class="item-text{% if item.completed %} completed{% endif %}" style="{% if item.completed %}text-decoration: line-through; color: gray;{% endif %}">
-              {{ item.text }} ({{ item.planned_date }})
-            </span>
-            <button class="remove-btn" style="flex-shrink: 0;">-</button>
+            <span class="item-text">{{ item.text }} ({{ item.planned_date }})</span>
+            <button class="remove-btn">-</button>
           </div>
         {% empty %}
-          <p class="empty-message" style="color: #888; font-style: italic; display: none;">(Пусто)</p>
+          <p class="empty-message">(Пусто)</p>
         {% endfor %}
-        <p class="empty-message" style="color: #888; font-style: italic; display: none;">(Пусто)</p> <!-- Гарантируем наличие -->
+        <p class="empty-message">(Пусто)</p>
       </div>
     </div>
   {% endfor %}
 </div>
-
-
 
 <script>
     // Переменная для текущего перетаскиваемого элемента
@@ -236,18 +263,29 @@ document.querySelectorAll('.save-btn').forEach(btn => {
 function addItemToColumn(column, item) {
   const itemsDiv = column.querySelector('.items');
   const div = document.createElement('div');
-  div.className = 'item';
+
+  // Добавляем класс 'item' и, если выполнено, добавляем 'completed'
+  div.classList.add('item');
+  if (item.completed) {
+    div.classList.add('completed');
+  }
+
+  div.setAttribute('draggable', 'true');
   div.dataset.id = item.id;
+
   div.innerHTML = `
-    <span class="item-index" style="color: #ccc; user-select: none; width: 20px; text-align: right; flex-shrink: 0;">
-    </span>
-    <input type="checkbox" class="complete-checkbox">
-    <span>${item.text} (${item.planned_date})</span>
+    <span class="item-index"></span>
+    <input type="checkbox" class="complete-checkbox" ${item.completed ? 'checked' : ''}>
+    <span class="item-text">${item.text} (${item.planned_date})</span>
     <button class="remove-btn">-</button>
   `;
+
+  // Вставляем в начало списка, как и раньше (можно по необходимости менять на append)
   itemsDiv.prepend(div);
+
   attachItemEventListeners(div);
 }
+
 
 function attachItemEventListeners(itemDiv) {
   const checkbox = itemDiv.querySelector('.complete-checkbox');
