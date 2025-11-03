@@ -1,0 +1,224 @@
+{% load dict_extras %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Чеклист</title>
+  <style>
+    .container { display: flex; }
+    .column { flex: 1; margin: 0 10px; border: 1px solid #ccc; padding: 10px; }
+    .completed { text-decoration: line-through; color: gray; }
+    .item { margin-bottom: 5px; }
+
+    .item {
+      display: flex;
+      align-items: center;
+      white-space: nowrap; /* Запрет переноса */
+      gap: 8px; /* Расстояние между элементами */
+      margin-bottom: 6px;
+    }
+
+    .item-index {
+      color: #ccc; /* Серый цвет */
+      user-select: none; /* Чтобы не выделялся */
+      width: 20px;
+      text-align: right;
+      flex-shrink: 0; /* Индекс всегда занимает место */
+    }
+
+    .item-text.completed {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container" style="display: flex; gap: 20px;">
+  {% load dict_extras %} <!-- загрузка фильтра get_item -->
+
+  {% for priority in priorities %}
+    <div class="column" data-priority-id="{{ priority.id }}" style="flex: 1; border: 1px solid #ccc; padding: 10px;">
+      <h2>{{ priority.name }}</h2>
+      <button class="add-btn">+</button>
+      <div class="add-form" style="display:none; margin-top:10px;">
+        <input type="text" placeholder="Текст" class="text-input"><br>
+        <input type="date" class="date-input"><br>
+        <button class="save-btn">Сохранить</button>
+        <button class="cancel-btn">Отмена</button>
+      </div>
+
+      <div class="items">
+        {% for item in items_by_priority|get_item:priority.id %}
+          <div class="item" data-id="{{ item.id }}" style="display: flex; align-items: center; white-space: nowrap; gap: 8px; margin-bottom: 6px;">
+            <span class="item-index" style="color: #ccc; user-select: none; width: 20px; text-align: right; flex-shrink: 0;">
+              {{ forloop.counter }}.
+            </span>
+            <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
+            <span class="item-text{% if item.completed %} completed{% endif %}" style="{% if item.completed %}text-decoration: line-through; color: gray;{% endif %}">
+              {{ item.text }} ({{ item.planned_date }})
+            </span>
+            <button class="remove-btn" style="flex-shrink: 0;">-</button>
+          </div>
+        {% empty %}
+          <p>Элементы отсутствуют</p>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+
+<script>
+    function updateIndices() {
+      document.querySelectorAll('.column').forEach(column => {
+        const items = column.querySelectorAll('.item');
+        items.forEach((item, index) => {
+          const indexElem = item.querySelector('.item-index');
+          if (indexElem) {
+            indexElem.textContent = (index + 1) + '.';
+          }
+        });
+      });
+    }
+    window.addEventListener('load', () => {
+      updateIndices();
+    });
+document.querySelectorAll('.add-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const col = btn.closest('.column');
+    col.querySelector('.add-btn').style.display = 'none';
+    col.querySelector('.add-form').style.display = 'block';
+  });
+});
+
+document.querySelectorAll('.cancel-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const col = btn.closest('.column');
+    col.querySelector('.add-form').style.display = 'none';
+    col.querySelector('.add-btn').style.display = 'inline-block';
+  });
+});
+
+document.querySelectorAll('.save-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const col = btn.closest('.column');
+    const priorityId = col.dataset.priorityId;
+    console.log("ПРИОРИРЕТ", priorityId)
+    const textInput = col.querySelector('.text-input');
+    const dateInput = col.querySelector('.date-input');
+    const text = textInput.value.trim();
+    const planned_date = dateInput.value;
+
+    if (!text || !planned_date) {
+      alert('Заполните все поля');
+      return;
+    }
+
+    fetch('{% url "checklist-item-create" %}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+      body: JSON.stringify({text, planned_date, priority: priorityId})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      addItemToColumn(col, data);
+      textInput.value = '';
+      dateInput.value = '';
+      col.querySelector('.add-form').style.display = 'none';
+      col.querySelector('.add-btn').style.display = 'inline-block';
+        updateIndices();
+    });
+  });
+});
+
+function addItemToColumn(column, item) {
+  const itemsDiv = column.querySelector('.items');
+  const div = document.createElement('div');
+  div.className = 'item';
+  div.dataset.id = item.id;
+  div.innerHTML = `
+    <span class="item-index" style="color: #ccc; user-select: none; width: 20px; text-align: right; flex-shrink: 0;">
+    </span>
+    <input type="checkbox" class="complete-checkbox">
+    <span>${item.text} (${item.planned_date})</span>
+    <button class="remove-btn">-</button>
+  `;
+  itemsDiv.prepend(div);
+  attachItemEventListeners(div);
+}
+
+function attachItemEventListeners(itemDiv) {
+  const checkbox = itemDiv.querySelector('.complete-checkbox');
+  checkbox.addEventListener('change', () => {
+    const id = itemDiv.dataset.id;
+    fetch(`/api/checklist/item/${id}/toggle_completed`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCookie('csrftoken')}
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.completed) {
+        itemDiv.classList.add('completed');
+      } else {
+        itemDiv.classList.remove('completed');
+      }
+      moveItemWithinColumn(itemDiv);
+        updateIndices();
+    });
+  });
+
+  const removeBtn = itemDiv.querySelector('.remove-btn');
+  removeBtn.addEventListener('click', () => {
+    if (!confirm('Вы уверены, что хотите удалить элемент?')) return;
+    const id = itemDiv.dataset.id;
+    fetch(`/api/checklist/item/${id}/archive`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(response => response.json())
+      .then(data => {
+        if (data.archived) {
+          itemDiv.remove();
+            updateIndices();
+        }
+      });
+  });
+}
+
+function moveItemWithinColumn(itemDiv) {
+  const column = itemDiv.closest('.column');
+  const itemsDiv = column.querySelector('.items');
+  itemDiv.remove();
+  if (itemDiv.classList.contains('completed')) {
+    itemsDiv.appendChild(itemDiv);
+  } else {
+    itemsDiv.prepend(itemDiv);
+  }
+}
+
+document.querySelectorAll('.item').forEach(attachItemEventListeners);
+
+// Получить CSRF токен
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const trimmed = cookie.trim();
+      if (trimmed.startsWith(name + '=')) {
+        cookieValue = decodeURIComponent(trimmed.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+</script>
+
+</body>
+</html>
