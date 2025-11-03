@@ -114,25 +114,23 @@
 <script>
     // Переменная для текущего перетаскиваемого элемента
     let draggedItem = null;
-
-    // Инициализация событий для элементов и контейнеров
-    document.querySelectorAll('.item').forEach(item => {
-      item.addEventListener('dragstart', e => {
-        draggedItem = item;
-        item.classList.add('dragging');
+    function attachDragAndDropListeners(itemDiv) {
+      itemDiv.addEventListener('dragstart', e => {
+        draggedItem = itemDiv;
+        itemDiv.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', item.dataset.id);
-        setTimeout(() => item.style.display = 'none', 0);
+        e.dataTransfer.setData('text/plain', itemDiv.dataset.id);
+        setTimeout(() => itemDiv.style.display = 'none', 0);
       });
 
-      item.addEventListener('dragend', e => {
+      itemDiv.addEventListener('dragend', e => {
         if(draggedItem) {
           draggedItem.classList.remove('dragging');
           draggedItem.style.display = 'flex';
           draggedItem = null;
         }
       });
-    });
+    }
 
     document.querySelectorAll('.items').forEach(container => {
       container.addEventListener('dragover', e => {
@@ -355,14 +353,16 @@ function attachItemEventListeners(itemDiv) {
 }
 
 function startEditingItem(itemDiv) {
-  // Получаем текущий текст и дату из строки
+  // Отключаем перетаскивание
+  itemDiv.removeAttribute('draggable');
+  itemDiv.ondragstart = e => e.preventDefault();
+
   const itemTextSpan = itemDiv.querySelector('.item-text');
-  const fullText = itemTextSpan.textContent.trim(); // например "Текст (2025-11-03)"
+  const fullText = itemTextSpan.textContent.trim();
   const match = fullText.match(/^(.*) \((\d{4}-\d{2}-\d{2})\)$/);
   const text = match ? match[1] : fullText;
   const date = match ? match[2] : '';
 
-  // Очистить содержимое itemDiv для редактирования
   itemDiv.innerHTML = `
     <span class="item-index"></span>
     <input type="text" class="edit-text-input" value="${text}" style="flex:1;">
@@ -373,7 +373,6 @@ function startEditingItem(itemDiv) {
 
   updateIndices();
 
-  // Обработчик кнопки сохранить
   itemDiv.querySelector('.edit-save-btn').addEventListener('click', () => {
     const newText = itemDiv.querySelector('.edit-text-input').value.trim();
     const newDate = itemDiv.querySelector('.edit-date-input').value;
@@ -398,7 +397,9 @@ function startEditingItem(itemDiv) {
         alert(data.error);
         return;
       }
-      // Обновляем элемент с новыми данными
+      // Восстанавливаем draggable и drag события
+      itemDiv.setAttribute('draggable', 'true');
+      itemDiv.ondragstart = null;
       itemDiv.innerHTML = `
         <span class="item-index"></span>
         <input type="checkbox" class="complete-checkbox" ${data.completed ? 'checked' : ''}>
@@ -406,27 +407,21 @@ function startEditingItem(itemDiv) {
         <span class="edit-btn" title="Редактировать">✏️</span>
         <span class="remove-btn" title="Удалить">✖</span>
       `;
-
-      if (data.completed) {
-        itemDiv.classList.add('completed');
-      } else {
-        itemDiv.classList.remove('completed');
-      }
-
       attachItemEventListeners(itemDiv);
+      attachDragAndDropListeners(itemDiv);
       updateIndices();
     });
   });
 
-  // Обработчик кнопки отмены
   itemDiv.querySelector('.edit-cancel-btn').addEventListener('click', () => {
-    // Восстанавливаем исходный вид без изменений
     const id = itemDiv.dataset.id;
-    fetch(`/api/checklist/item/${id}`, {  // Нужно, чтобы получить актуальные данные с сервера
+    fetch(`/api/checklist/item/${id}`, {
       headers: {'X-CSRFToken': getCookie('csrftoken')}
     })
     .then(response => response.json())
     .then(data => {
+      itemDiv.setAttribute('draggable', 'true');
+      itemDiv.ondragstart = null;
       itemDiv.innerHTML = `
         <span class="item-index"></span>
         <input type="checkbox" class="complete-checkbox" ${data.completed ? 'checked' : ''}>
@@ -434,12 +429,8 @@ function startEditingItem(itemDiv) {
         <span class="edit-btn" title="Редактировать">✏️</span>
         <span class="remove-btn" title="Удалить">✖</span>
       `;
-      if (data.completed) {
-        itemDiv.classList.add('completed');
-      } else {
-        itemDiv.classList.remove('completed');
-      }
       attachItemEventListeners(itemDiv);
+      attachDragAndDropListeners(itemDiv);
       updateIndices();
     });
   });
@@ -455,8 +446,10 @@ function moveItemWithinColumn(itemDiv) {
   }
 }
 
-document.querySelectorAll('.item').forEach(attachItemEventListeners);
-
+document.querySelectorAll('.item').forEach(item => {
+  attachItemEventListeners(item);
+  attachDragAndDropListeners(item);
+});
 // Получить CSRF токен
 function getCookie(name) {
   let cookieValue = null;
