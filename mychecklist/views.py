@@ -8,7 +8,12 @@ import json
 def main_view(request):
     priorities = Priority.objects.order_by('level')
     # Для каждой колонки берем активные (неархивированные) элементы
-    checklist_items = ChecklistItem.objects.filter(archived=False).select_related('priority')
+    checklist_items = (
+        ChecklistItem.objects
+        .filter(archived=False)
+        .select_related('priority')
+        .order_by('planned_date', 'created_at')
+    )
     items_by_priority = {p.id: [] for p in priorities}
 
     for item in checklist_items:
