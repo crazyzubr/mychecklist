@@ -211,10 +211,32 @@
 document.querySelectorAll('.add-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const col = btn.closest('.column');
-    col.querySelector('.add-btn').style.display = 'none';
+    const priorityLevel = parseInt(col.dataset.priorityLevel, 10);
+
+    // Получаем поле дата в форме
+    const dateInput = col.querySelector('.date-input');
+
+    // Заполняем поле даты по уровню
+    if (priorityLevel === 0) {
+        // Получаем сегодняшнюю дату в формате yyyy-mm-dd
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+      dateInput.value = todayStr;
+    } else if (priorityLevel === 1) {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      dateInput.value = tomorrowStr;
+    } else {
+      dateInput.value = ''; // Оставляем пустым
+    }
+
+    btn.style.display = 'none';
     col.querySelector('.add-form').style.display = 'block';
   });
 });
+
 
 document.querySelectorAll('.cancel-btn').forEach(btn => {
   btn.addEventListener('click', () => {
