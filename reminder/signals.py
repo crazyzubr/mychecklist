@@ -42,3 +42,18 @@ def checklistitem_post_save(sender, instance, created, **kwargs):
             action='moved',
             details=f'Изменение приоритета: {old_priority_name} -> {new_priority_name}'
         )
+    if old.text != instance.text:
+        ChecklistItemHistory.objects.create(
+            item=instance,
+            action='changed',
+            details=f'Изменение текста: {old.text} -> {instance.text}'
+        )
+    if old.planned_date != instance.planned_date:
+        ChecklistItemHistory.objects.create(
+            item=instance,
+            action='changed',
+            details=(
+                f'Изменение планируемой даты: '
+                f'{old.planned_date.isoformat()} -> {instance.planned_date.isoformat()}'
+            )
+        )

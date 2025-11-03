@@ -94,6 +94,10 @@ class ChecklistItemMoveView(APIView):
 
 class ChecklistItemEditAPIView(APIView):
 
+    def get(self, request, pk):
+        item = get_object_or_404(ChecklistItem, pk=pk)
+        return Response(ChecklistItemSerializer(item).data, status=status.HTTP_200_OK)
+
     def post(self, request, pk):
         item = get_object_or_404(ChecklistItem, pk=pk)
         serializer = ChecklistItemSerializer(item, data=request.data, partial=True)

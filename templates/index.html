@@ -98,7 +98,8 @@
           <div class="item{% if item.completed %} completed{% endif %}" draggable="true" data-id="{{ item.id }}">
             <span class="item-index">{{ forloop.counter }}.</span>
             <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
-            <span class="item-text">{{ item.text }} ({{ item.planned_date }})</span>
+            <span class="item-text">{{ item.text }}</span>
+            <span class="item-date" data-date="{{ item.planned_date.isoformat }}">{{ item.planned_date }}</span>
             <span class="edit-btn" title="Редактировать">✏️</span>
             <span class="remove-btn" title="Удалить">✖</span>
           </div>
@@ -298,9 +299,10 @@ function addItemToColumn(column, item) {
   div.innerHTML = `
     <span class="item-index"></span>
     <input type="checkbox" class="complete-checkbox" ${item.completed ? 'checked' : ''}>
-    <span class="item-text">${item.text} (${item.planned_date})</span>
+    <span class="item-text">${item.text}</span>
+    <span class="item-date" data-date="${item.planned_date}">${new Date(item.planned_date).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'})}</span>
     <span class="edit-btn" title="Редактировать">✏️</span>
-    <span class="remove-btn">✖</span>
+    <span class="remove-btn" title="Удалить">✖</span>
   `;
 
   // Вставляем в начало списка, как и раньше (можно по необходимости менять на append)
@@ -354,24 +356,21 @@ function attachItemEventListeners(itemDiv) {
 
 function startEditingItem(itemDiv) {
   // Отключаем перетаскивание
-  itemDiv.removeAttribute('draggable');
-  itemDiv.ondragstart = e => e.preventDefault();
+    itemDiv.removeAttribute('draggable');
+    itemDiv.ondragstart = e => e.preventDefault();
 
-  const itemTextSpan = itemDiv.querySelector('.item-text');
-  const fullText = itemTextSpan.textContent.trim();
-  const match = fullText.match(/^(.*) \((\d{4}-\d{2}-\d{2})\)$/);
-  const text = match ? match[1] : fullText;
-  const date = match ? match[2] : '';
+    const text = itemDiv.querySelector('.item-text').textContent.trim();
+    const date = itemDiv.querySelector('.item-date').dataset.date; // ISO-формат для input
 
-  itemDiv.innerHTML = `
+    itemDiv.innerHTML = `
     <span class="item-index"></span>
     <input type="text" class="edit-text-input" value="${text}" style="flex:1;">
     <input type="date" class="edit-date-input" value="${date}">
     <button class="edit-save-btn">Сохранить</button>
     <button class="edit-cancel-btn">Отмена</button>
-  `;
+    `;
 
-  updateIndices();
+    updateIndices();
 
   itemDiv.querySelector('.edit-save-btn').addEventListener('click', () => {
     const newText = itemDiv.querySelector('.edit-text-input').value.trim();
@@ -383,7 +382,7 @@ function startEditingItem(itemDiv) {
     }
 
     const id = itemDiv.dataset.id;
-    fetch(`/api/checklist/item/${id}/edit`, {
+    fetch(`/api/checklist/item/${id}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -400,13 +399,14 @@ function startEditingItem(itemDiv) {
       // Восстанавливаем draggable и drag события
       itemDiv.setAttribute('draggable', 'true');
       itemDiv.ondragstart = null;
-      itemDiv.innerHTML = `
-        <span class="item-index"></span>
-        <input type="checkbox" class="complete-checkbox" ${data.completed ? 'checked' : ''}>
-        <span class="item-text">${data.text} (${data.planned_date})</span>
-        <span class="edit-btn" title="Редактировать">✏️</span>
-        <span class="remove-btn" title="Удалить">✖</span>
-      `;
+    itemDiv.innerHTML = `
+      <span class="item-index"></span>
+      <input type="checkbox" class="complete-checkbox" ${data.completed ? 'checked' : ''}>
+      <span class="item-text">${data.text}</span>
+      <span class="item-date" data-date="${data.planned_date}">${new Date(data.planned_date).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'})}</span>
+      <span class="edit-btn" title="Редактировать">✏️</span>
+      <span class="remove-btn" title="Удалить">✖</span>
+    `;
       attachItemEventListeners(itemDiv);
       attachDragAndDropListeners(itemDiv);
       updateIndices();
@@ -422,13 +422,14 @@ function startEditingItem(itemDiv) {
     .then(data => {
       itemDiv.setAttribute('draggable', 'true');
       itemDiv.ondragstart = null;
-      itemDiv.innerHTML = `
-        <span class="item-index"></span>
-        <input type="checkbox" class="complete-checkbox" ${data.completed ? 'checked' : ''}>
-        <span class="item-text">${data.text} (${data.planned_date})</span>
-        <span class="edit-btn" title="Редактировать">✏️</span>
-        <span class="remove-btn" title="Удалить">✖</span>
-      `;
+    itemDiv.innerHTML = `
+      <span class="item-index"></span>
+      <input type="checkbox" class="complete-checkbox" ${data.completed ? 'checked' : ''}>
+      <span class="item-text">${data.text}</span>
+      <span class="item-date" data-date="${data.planned_date}">${new Date(data.planned_date).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'})}</span>
+      <span class="edit-btn" title="Редактировать">✏️</span>
+      <span class="remove-btn" title="Удалить">✖</span>
+    `;
       attachItemEventListeners(itemDiv);
       attachDragAndDropListeners(itemDiv);
       updateIndices();

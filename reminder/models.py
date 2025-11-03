@@ -40,6 +40,7 @@ class ChecklistItemHistory(models.Model):
         ('archived', 'Архивировано'),
         ('unarchived', 'Разархивировано'),
         ('moved', 'Перемещено'),
+        ('changed', 'Изменено'),
     ]
 
     item = models.ForeignKey(
