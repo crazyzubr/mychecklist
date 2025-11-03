@@ -18,7 +18,7 @@
         box-sizing: border-box;
       }
 
-      .completed {
+      .completed .item-text {
         text-decoration: line-through;
         color: gray;
       }
@@ -76,6 +76,7 @@
         flex-shrink: 0;
       }
 
+
   </style>
 </head>
 <body>
@@ -98,7 +99,8 @@
             <span class="item-index">{{ forloop.counter }}.</span>
             <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
             <span class="item-text">{{ item.text }} ({{ item.planned_date }})</span>
-            <button class="remove-btn">-</button>
+            <span class="edit-btn" title="Редактировать">✏️</span>
+            <span class="remove-btn" title="Удалить">✖</span>
           </div>
         {% empty %}
           <p class="empty-message">(Пусто)</p>
@@ -299,7 +301,8 @@ function addItemToColumn(column, item) {
     <span class="item-index"></span>
     <input type="checkbox" class="complete-checkbox" ${item.completed ? 'checked' : ''}>
     <span class="item-text">${item.text} (${item.planned_date})</span>
-    <button class="remove-btn">-</button>
+    <span class="edit-btn" title="Редактировать">✏️</span>
+    <span class="remove-btn">✖</span>
   `;
 
   // Вставляем в начало списка, как и раньше (можно по необходимости менять на append)

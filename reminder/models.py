@@ -18,19 +18,41 @@ class Priority(models.Model):
 class ChecklistItem(models.Model):
     text = models.TextField('Текст')
     planned_date = models.DateField('Планируемая дата завершения')
-    priority = models.ForeignKey(Priority, on_delete=models.PROTECT, verbose_name='Приоритет')
+    priority = models.ForeignKey('Priority', on_delete=models.PROTECT, verbose_name='Приоритет')
     completed = models.BooleanField('Выполнено', default=False)
     archived = models.BooleanField('Архивирован', default=False)
-    completion_date = models.DateTimeField('Дата завершения', null=True, blank=True)
     order = models.PositiveIntegerField('Порядок', default=0)
+    created_at = models.DateTimeField('Дата и время создания', auto_now_add=True)  # добавленное поле
 
     class Meta:
         verbose_name = 'Элемент чеклиста'
         verbose_name_plural = 'Элементы чеклиста'
 
-    def save(self, *args, **kwargs):
-        if self.completed and not self.completion_date:
-            self.completion_date = timezone.now()
-        elif not self.completed:
-            self.completion_date = None
-        super().save(*args, **kwargs)
+    def __str__(self):
+        return f'{self.planned_date}: {self.text}'
+
+
+class ChecklistItemHistory(models.Model):
+    ACTION_CHOICES = [
+        ('created', 'Создано'),
+        ('completed', 'Выполнено'),
+        ('uncompleted', 'Не выполнено'),
+        ('archived', 'Архивировано'),
+        ('unarchived', 'Разархивировано'),
+        ('moved', 'Перемещено'),
+    ]
+
+    item = models.ForeignKey(
+        ChecklistItem, on_delete=models.CASCADE,
+        related_name='history', verbose_name='Чеклист элемент')
+    action = models.CharField('Действие', max_length=20, choices=ACTION_CHOICES)
+    details = models.TextField('Дополнительная информация', blank=True, null=True)
+    created_at = models.DateTimeField('Дата и время', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'История элемента чеклиста'
+        verbose_name_plural = 'Истории элементов чеклиста'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Действие от {self.created_at.isoformat()}'

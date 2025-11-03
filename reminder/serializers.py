@@ -8,5 +8,5 @@ class ChecklistItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChecklistItem
         fields = [
-            'id', 'text', 'planned_date', 'priority', 'completed', 'completion_date', 'archived']
-        read_only_fields = ['id', 'completion_date', 'archived']
+            'id', 'text', 'planned_date', 'priority', 'completed', 'archived']
+        read_only_fields = ['id', 'archived']
