@@ -36,107 +36,67 @@
       border: 2px dashed #3399ff;
     }
 
+    .dragging {
+      opacity: 0.5;
+      border: 2px solid #3399ff;
+    }
+
+
 
   </style>
 </head>
 <body>
 
 <div class="container" style="display: flex; gap: 20px;">
-  {% load dict_extras %} <!-- загрузка фильтра get_item -->
-
   {% for priority in priorities %}
-      <div class="column" data-priority-id="{{ priority.id }}" style="flex: 1; border: 1px solid #ccc; padding: 10px;">
-        <h2>{{ priority.name }}</h2>
-        <button class="add-btn">+</button>
-        <div class="add-form" style="display:none; margin-top:10px;">
-          <input type="text" placeholder="Текст" class="text-input"><br>
-          <input type="date" class="date-input"><br>
-          <button class="save-btn">Сохранить</button>
-          <button class="cancel-btn">Отмена</button>
-        </div>
-
-        <div class="items" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragleave="onDragLeave(event)" style="min-height: 40px;">
-          {% for item in items_by_priority|get_item:priority.id %}
-            <div class="item" draggable="true" data-id="{{ item.id }}" style="display: flex; align-items: center; white-space: nowrap; gap: 8px; margin-bottom: 6px;">
-              <span class="item-index" style="color: #ccc; user-select: none; width: 20px; text-align: right; flex-shrink: 0;">
-                {{ forloop.counter }}.
-              </span>
-              <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
-              <span class="item-text{% if item.completed %} completed{% endif %}" style="{% if item.completed %}text-decoration: line-through; color: gray;{% endif %}">
-                {{ item.text }} ({{ item.planned_date }})
-              </span>
-              <button class="remove-btn" style="flex-shrink: 0;">-</button>
-            </div>
-          {% empty %}
-              <p class="empty-message" style="color: #888; font-style: italic; display: none;">(Пусто)</p>
-          {% endfor %}
-        </div>
+    <div class="column" data-priority-id="{{ priority.id }}" style="flex: 1; border: 1px solid #ccc; padding: 10px;">
+      <h2>{{ priority.name }}</h2>
+      <button class="add-btn">+</button>
+      <div class="add-form" style="display:none; margin-top:10px;">
+        <input type="text" placeholder="Текст" class="text-input"><br>
+        <input type="date" class="date-input"><br>
+        <button class="save-btn">Сохранить</button>
+        <button class="cancel-btn">Отмена</button>
       </div>
 
+      <div class="items" style="min-height: 40px;">
+        {% for item in items_by_priority|get_item:priority.id %}
+          <div class="item" draggable="true" data-id="{{ item.id }}" style="display: flex; align-items: center; white-space: nowrap; gap: 8px; margin-bottom: 6px;">
+            <span class="item-index" style="color: #ccc; user-select: none; width: 20px; text-align: right; flex-shrink: 0;">
+              {{ forloop.counter }}.
+            </span>
+            <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
+            <span class="item-text{% if item.completed %} completed{% endif %}" style="{% if item.completed %}text-decoration: line-through; color: gray;{% endif %}">
+              {{ item.text }} ({{ item.planned_date }})
+            </span>
+            <button class="remove-btn" style="flex-shrink: 0;">-</button>
+          </div>
+        {% empty %}
+          <p class="empty-message" style="color: #888; font-style: italic; display: none;">(Пусто)</p>
+        {% endfor %}
+        <p class="empty-message" style="color: #888; font-style: italic; display: none;">(Пусто)</p> <!-- Гарантируем наличие -->
+      </div>
+    </div>
   {% endfor %}
 </div>
+
 
 
 <script>
     // Переменная для текущего перетаскиваемого элемента
     let draggedItem = null;
 
-    function onDragOver(event) {
-      event.preventDefault();
-      const container = event.currentTarget;
-      container.classList.add('drop-target');
-    }
-
-    function onDragLeave(event) {
-      const container = event.currentTarget;
-      container.classList.remove('drop-target');
-    }
-
-    function onDrop(event) {
-      event.preventDefault();
-      const container = event.currentTarget;
-      container.classList.remove('drop-target');
-
-      const draggedItemId = event.dataTransfer.getData('text/plain');
-      const draggedItem = document.querySelector(`.item[data-id='${draggedItemId}']`);
-      if(!draggedItem) return;
-
-      // Вставляем элемент в эту пустую колонку
-      container.appendChild(draggedItem);
-
-      // Обновляем индексы в этой и других колонках
-      updateIndices();
-
-      // Обновляем отображение пустого сообщения
-      updateEmptyMessage(container);
-
-      // Отправляем запрос на сервер с новым приоритетом и позицией
-      const newPriorityId = container.closest('.column').dataset.priorityId;
-      const newOrder = Array.from(container.children).indexOf(draggedItem);
-
-      fetch('/api/checklist/item/move', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({id: draggedItemId, priority: newPriorityId, order: newOrder})
-      });
-    }
-
-
+    // Инициализация событий для элементов и контейнеров
     document.querySelectorAll('.item').forEach(item => {
-      item.addEventListener('dragstart', (e) => {
+      item.addEventListener('dragstart', e => {
         draggedItem = item;
-        item.classList.add('dragging');  // выделяем только этот элемент
-
+        item.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', item.dataset.id);
-
         setTimeout(() => item.style.display = 'none', 0);
       });
 
-      item.addEventListener('dragend', () => {
+      item.addEventListener('dragend', e => {
         if(draggedItem) {
           draggedItem.classList.remove('dragging');
           draggedItem.style.display = 'flex';
@@ -145,60 +105,66 @@
       });
     });
 
-
-    // Dragover/drop на контейнере с элементами
     document.querySelectorAll('.items').forEach(container => {
-      container.addEventListener('dragover', (e) => {
+      container.addEventListener('dragover', e => {
         e.preventDefault();
-        container.classList.add('drop-target');  // выделение контейнера для ясности
+        container.classList.add('drop-target');
       });
+
       container.addEventListener('dragleave', () => {
         container.classList.remove('drop-target');
       });
-      container.addEventListener('drop', (e) => {
-        e.preventDefault();
-        container.classList.remove('drop-target');
 
-        const draggedId = e.dataTransfer.getData('text/plain');
-        const draggedElem = document.querySelector(`.item[data-id='${draggedId}']`);
-        if (!draggedElem) return;
+        container.addEventListener('drop', e => {
+          e.preventDefault();
+          container.classList.remove('drop-target');
 
-        // Добавляем элемент в контейнер
-        container.appendChild(draggedElem);
+          const draggedId = e.dataTransfer.getData('text/plain');
+          const draggedElem = document.querySelector(`.item[data-id='${draggedId}']`);
+          if (!draggedElem) return;
 
-        updateIndices();
-        updateEmptyMessage(container);
+          const oldContainer = draggedElem.parentNode;
 
-        // Отправляем update на сервер
-        const newPriorityId = container.closest('.column').dataset.priorityId;
-        const newOrder = Array.from(container.children).indexOf(draggedElem);
+          container.appendChild(draggedElem);
+          sortItemsByCompleted(container);
+          sortItemsByCompleted(oldContainer);
+          updateIndices();
+          updateEmptyMessage(container);
+          updateEmptyMessage(oldContainer);
 
-        fetch('/api/checklist/item/move', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-          },
-          body: JSON.stringify({id: draggedId, priority: newPriorityId, order: newOrder})
+          const newPriorityId = container.closest('.column').dataset.priorityId;
+          const newOrder = Array.from(container.children).indexOf(draggedElem);
+
+          fetch('/api/checklist/item/move', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ id: draggedId, priority: newPriorityId, order: newOrder }),
+          });
         });
-      });
     });
 
-    // Обновление пустого сообщения
-    function updateEmptyMessage(container) {
-      if (!container) return; // защита от null
-      const emptyMsg = container.querySelector('.empty-message');
-      if (!emptyMsg) return; // если нет элемента с сообщением — выйти
-      const itemsCount = container.querySelectorAll('.item').length;
-      if (itemsCount === 0) {
-        emptyMsg.style.display = 'block';
-      } else {
-        emptyMsg.style.display = 'none';
-      }
+    function sortItemsByCompleted(container) {
+      const itemsArray = Array.from(container.querySelectorAll('.item'));
+      itemsArray.sort((a, b) => {
+        const aCompleted = a.classList.contains('completed') ? 1 : 0;
+        const bCompleted = b.classList.contains('completed') ? 1 : 0;
+        return aCompleted - bCompleted;  // 0 (false) идет перед 1 (true)
+      });
+      itemsArray.forEach(item => container.appendChild(item));
     }
 
 
-    // Обновление нумерации
+    function updateEmptyMessage(container) {
+      if (!container) return;
+      const emptyMsg = container.querySelector('.empty-message');
+      if (!emptyMsg) return;
+      const itemsCount = container.querySelectorAll('.item').length;
+      emptyMsg.style.display = itemsCount === 0 ? 'block' : 'none';
+    }
+
     function updateIndices() {
       document.querySelectorAll('.column').forEach(column => {
         const items = column.querySelectorAll('.item');
@@ -208,14 +174,13 @@
         });
       });
     }
-    // Вызовем при загрузке страницы и после любых манипуляций с элементами
-    document.querySelectorAll('.items').forEach(updateEmptyMessage);
-    updateIndices();
 
-
+    // Инициализация после загрузки
     window.addEventListener('load', () => {
+      document.querySelectorAll('.items').forEach(updateEmptyMessage);
       updateIndices();
     });
+
 document.querySelectorAll('.add-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const col = btn.closest('.column');
