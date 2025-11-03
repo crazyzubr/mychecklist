@@ -90,3 +90,14 @@ class ChecklistItemMoveView(APIView):
             item.save()
 
         return Response({'status': 'success'}, status=status.HTTP_200_OK)
+
+
+class ChecklistItemEditAPIView(APIView):
+
+    def post(self, request, pk):
+        item = get_object_or_404(ChecklistItem, pk=pk)
+        serializer = ChecklistItemSerializer(item, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

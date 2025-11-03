@@ -347,8 +347,103 @@ function attachItemEventListeners(itemDiv) {
         }
       });
   });
+
+  const editBtn = itemDiv.querySelector('.edit-btn');
+    editBtn.addEventListener('click', () => {
+     startEditingItem(itemDiv);
+    });
 }
 
+function startEditingItem(itemDiv) {
+  // Получаем текущий текст и дату из строки
+  const itemTextSpan = itemDiv.querySelector('.item-text');
+  const fullText = itemTextSpan.textContent.trim(); // например "Текст (2025-11-03)"
+  const match = fullText.match(/^(.*) \((\d{4}-\d{2}-\d{2})\)$/);
+  const text = match ? match[1] : fullText;
+  const date = match ? match[2] : '';
+
+  // Очистить содержимое itemDiv для редактирования
+  itemDiv.innerHTML = `
+    <span class="item-index"></span>
+    <input type="text" class="edit-text-input" value="${text}" style="flex:1;">
+    <input type="date" class="edit-date-input" value="${date}">
+    <button class="edit-save-btn">Сохранить</button>
+    <button class="edit-cancel-btn">Отмена</button>
+  `;
+
+  updateIndices();
+
+  // Обработчик кнопки сохранить
+  itemDiv.querySelector('.edit-save-btn').addEventListener('click', () => {
+    const newText = itemDiv.querySelector('.edit-text-input').value.trim();
+    const newDate = itemDiv.querySelector('.edit-date-input').value;
+
+    if (!newText || !newDate) {
+      alert('Пожалуйста, заполните оба поля');
+      return;
+    }
+
+    const id = itemDiv.dataset.id;
+    fetch(`/api/checklist/item/${id}/edit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({text: newText, planned_date: newDate})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      // Обновляем элемент с новыми данными
+      itemDiv.innerHTML = `
+        <span class="item-index"></span>
+        <input type="checkbox" class="complete-checkbox" ${data.completed ? 'checked' : ''}>
+        <span class="item-text">${data.text} (${data.planned_date})</span>
+        <span class="edit-btn" title="Редактировать">✏️</span>
+        <span class="remove-btn" title="Удалить">✖</span>
+      `;
+
+      if (data.completed) {
+        itemDiv.classList.add('completed');
+      } else {
+        itemDiv.classList.remove('completed');
+      }
+
+      attachItemEventListeners(itemDiv);
+      updateIndices();
+    });
+  });
+
+  // Обработчик кнопки отмены
+  itemDiv.querySelector('.edit-cancel-btn').addEventListener('click', () => {
+    // Восстанавливаем исходный вид без изменений
+    const id = itemDiv.dataset.id;
+    fetch(`/api/checklist/item/${id}`, {  // Нужно, чтобы получить актуальные данные с сервера
+      headers: {'X-CSRFToken': getCookie('csrftoken')}
+    })
+    .then(response => response.json())
+    .then(data => {
+      itemDiv.innerHTML = `
+        <span class="item-index"></span>
+        <input type="checkbox" class="complete-checkbox" ${data.completed ? 'checked' : ''}>
+        <span class="item-text">${data.text} (${data.planned_date})</span>
+        <span class="edit-btn" title="Редактировать">✏️</span>
+        <span class="remove-btn" title="Удалить">✖</span>
+      `;
+      if (data.completed) {
+        itemDiv.classList.add('completed');
+      } else {
+        itemDiv.classList.remove('completed');
+      }
+      attachItemEventListeners(itemDiv);
+      updateIndices();
+    });
+  });
+}
 function moveItemWithinColumn(itemDiv) {
   const column = itemDiv.closest('.column');
   const itemsDiv = column.querySelector('.items');
