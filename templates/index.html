@@ -51,18 +51,14 @@
 
       <div class="items">
         {% for item in items_by_priority|get_item:priority.id %}
-          <div class="item" data-id="{{ item.id }}" style="display: flex; align-items: center; white-space: nowrap; gap: 8px; margin-bottom: 6px;">
-            <span class="item-index" style="color: #ccc; user-select: none; width: 20px; text-align: right; flex-shrink: 0;">
-              {{ forloop.counter }}.
-            </span>
-            <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
-            <span class="item-text{% if item.completed %} completed{% endif %}" style="{% if item.completed %}text-decoration: line-through; color: gray;{% endif %}">
-              {{ item.text }} ({{ item.planned_date }})
-            </span>
-            <button class="remove-btn" style="flex-shrink: 0;">-</button>
-          </div>
+        <div class="item" draggable="true" data-id="{{ item.id }}" style="display: flex; align-items: center; white-space: nowrap; gap: 8px; margin-bottom: 6px;">
+          <span class="item-index" style="color: #ccc; user-select: none; width: 20px; text-align: right; flex-shrink: 0;">{{ forloop.counter }}.</span>
+          <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
+          <span class="item-text{% if item.completed %} completed{% endif %}">{{ item.text }} ({{ item.planned_date }})</span>
+          <button class="remove-btn" style="flex-shrink: 0;">-</button>
+        </div>
         {% empty %}
-          <p>Элементы отсутствуют</p>
+            <p><i>(Пусто)</i></p>
         {% endfor %}
       </div>
     </div>
@@ -71,6 +67,51 @@
 
 
 <script>
+    let draggedItem = null; // Сохраняем перетаскиваемый элемент
+
+    document.querySelectorAll('.item').forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        draggedItem = item;
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => item.style.display = 'none', 0); // Скрыть элемент пока тянут
+      });
+
+      item.addEventListener('dragend', () => {
+        draggedItem.style.display = 'flex';
+        draggedItem = null;
+      });
+
+      item.addEventListener('dragover', (e) => {
+        e.preventDefault(); // Разрешаем сброс
+        e.dataTransfer.dropEffect = 'move';
+      });
+
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (draggedItem && draggedItem !== item) {
+          const parent = item.parentNode;
+          // Вставить draggedItem перед item
+          parent.insertBefore(draggedItem, item);
+
+          updateIndices(); // Обновить нумерацию после перестановки
+
+          // Здесь нужно отправить на сервер обновленную позицию и колонку draggedItem через fetch к DRF API
+          const movedItemId = draggedItem.dataset.id;
+          const newPriorityId = parent.closest('.column').dataset.priorityId;
+          // Дополнительно можно передать индекс (порядок) в новой колонке
+          const newOrder = Array.from(parent.children).indexOf(draggedItem);
+
+          fetch('/api/checklist/item/move', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({id: movedItemId, priority: newPriorityId, order: newOrder})
+          });
+        }
+      });
+    });
     function updateIndices() {
       document.querySelectorAll('.column').forEach(column => {
         const items = column.querySelectorAll('.item');

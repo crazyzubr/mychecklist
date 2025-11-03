@@ -4,6 +4,7 @@ from .views import (
     ChecklistItemCreateView,
     ChecklistItemToggleCompletedView,
     ChecklistItemArchiveView,
+    ChecklistItemMoveView,
 )
 
 urlpatterns = [
@@ -11,6 +12,8 @@ urlpatterns = [
          name='checklist-main'),
     path('checklist/item', ChecklistItemCreateView.as_view(),
          name='checklist-item-create'),
+    path('checklist/item/move', ChecklistItemMoveView.as_view(),
+         name='checklist-item-move'),
     path('checklist/item/<int:pk>/toggle_completed',
          ChecklistItemToggleCompletedView.as_view(), name='checklist-item-toggle'),
     path('checklist/item/<int:pk>/archive',

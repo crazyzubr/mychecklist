@@ -22,6 +22,7 @@ class ChecklistItem(models.Model):
     completed = models.BooleanField('Выполнено', default=False)
     archived = models.BooleanField('Архивирован', default=False)
     completion_date = models.DateTimeField('Дата завершения', null=True, blank=True)
+    order = models.PositiveIntegerField('Порядок', default=0)
 
     class Meta:
         verbose_name = 'Элемент чеклиста'

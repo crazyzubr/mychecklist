@@ -1,3 +1,5 @@
+from django.db import transaction
+from django.db.models import F
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -44,3 +46,47 @@ class ChecklistItemArchiveView(APIView):
         item.archived = True
         item.save()
         return Response({'archived': True})
+
+
+class ChecklistItemMoveView(APIView):
+
+    def post(self, request):
+        """
+        Ожидает JSON с:
+        - id (int): ID перемещаемого элемента
+        - priority (int): ID приоритета колонки, куда переместить
+        - order (int): новая позиция в колонке (от 0)
+        """
+        data = request.data
+        item_id = data.get('id')
+        new_priority_id = data.get('priority')
+        new_order = data.get('order')
+
+        if item_id is None or new_priority_id is None or new_order is None:
+            return Response({'error': 'id, priority и order обязательны'}, status=status.HTTP_400_BAD_REQUEST)
+
+        item = get_object_or_404(ChecklistItem, pk=item_id)
+
+        # Обновляем priority и порядок (order)
+        # Нужно в модели добавить поле order = PositiveIntegerField(default=0), если его нет
+
+        with transaction.atomic():
+            # Сдвигаем другие элементы в целевой колонке, которые идут >= new_order
+            ChecklistItem.objects.filter(
+                priority_id=new_priority_id,
+                order__gte=new_order
+            ).exclude(pk=item.pk).update(order=F('order') + 1)
+
+            # При этом сдвигаем назад элементы колонки старой, если меняется колонка
+            if item.priority_id != new_priority_id:
+                ChecklistItem.objects.filter(
+                    priority_id=item.priority_id,
+                    order__gt=item.order
+                ).update(order=F('order') - 1)
+
+            # Обновляем перемещаемый элемент
+            item.priority_id = new_priority_id
+            item.order = new_order
+            item.save()
+
+        return Response({'status': 'success'}, status=status.HTTP_200_OK)
