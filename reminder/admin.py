@@ -18,7 +18,7 @@ class ChecklistItemHistoryInline(admin.TabularInline):
 @admin.register(ChecklistItem)
 class ChecklistItemAdmin(admin.ModelAdmin):
     inlines = [ChecklistItemHistoryInline]
-    list_display = ('id', 'text', 'priority', 'created_at', 'completed', 'archived')
+    list_display = ('id', 'text', 'priority', 'created_at', 'percentage', 'completed', 'archived')
     list_filter = ('priority', 'created_at')
     search_fields = ('text',)
     date_hierarchy = 'created_at'

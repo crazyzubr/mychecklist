@@ -24,6 +24,10 @@
         color: gray;
       }
 
+      .item-percentage-0, .item-percentage-100 {
+          display: none;
+      }
+
       .item {
         display: flex;
         align-items: center;
@@ -71,6 +75,10 @@
         box-sizing: border-box;
       }
 
+      .edit-progress-input, .progress-input {
+          width: 50px;
+      }
+
 
       .empty-message {
         color: #888;
@@ -99,8 +107,9 @@
       <h2>{{ priority.name }}</h2>
       <button class="add-btn">+</button>
       <div class="add-form">
-        <input type="text" placeholder="Текст" class="text-input">
-        <input type="date" class="date-input">
+        <input type="text" placeholder="Текст" class="text-input" />
+        <input type="date" class="date-input" />
+        <input type="number" class="progress-input" />
         <button class="save-btn">Сохранить</button>
         <button class="cancel-btn">Отмена</button>
       </div>
@@ -112,6 +121,7 @@
             <input type="checkbox" class="complete-checkbox" {% if item.completed %}checked{% endif %}>
             <span class="item-text">{{ item.text }}</span>
             <span class="item-date" data-date="{{ item.planned_date.isoformat }}">{{ item.planned_date }}</span>
+            <span class="item-percentage item-percentage-{{ item.percentage }}" data-percentage="{{ item.percentage }}">({{ item.percentage }}%)</span>
             <span class="edit-btn" title="Редактировать">✏️</span>
             <span class="remove-btn" title="Удалить">✖</span>
           </div>

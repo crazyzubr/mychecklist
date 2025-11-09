@@ -7,6 +7,7 @@
             <input type="checkbox" class="complete-checkbox" ${data.completed ? 'checked' : ''}>
             <span class="item-text">${data.text}</span>
             <span class="item-date" data-date="${data.planned_date}">${new Date(data.planned_date).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'})}</span>
+            <span class="item-percentage item-percentage-${data.percentage}" data-percentage="${data.percentage}">(${data.percentage}%)</span>
             <span class="edit-btn" title="Редактировать">✏️</span>
             <span class="remove-btn" title="Удалить">✖</span>
           `;
@@ -150,9 +151,10 @@ document.querySelectorAll('.save-btn').forEach(btn => {
     const priorityId = col.dataset.priorityId;
     const textInput = col.querySelector('.text-input');
     const dateInput = col.querySelector('.date-input');
+    const percentageInput = col.querySelector('.progress-input');
     const text = textInput.value.trim();
     const planned_date = dateInput.value;
-
+    const percentage = percentageInput.value || 0;
     if (!text || !planned_date) {
       alert('Заполните все поля');
       return;
@@ -161,7 +163,7 @@ document.querySelectorAll('.save-btn').forEach(btn => {
     fetch('/api/checklist/item', {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-      body: JSON.stringify({text, planned_date, priority: priorityId})
+      body: JSON.stringify({text, planned_date, priority: priorityId, percentage: percentage})
     })
     .then(response => response.json())
     .then(data => {
@@ -249,12 +251,14 @@ function startEditingItem(itemDiv) {
     itemDiv.ondragstart = e => e.preventDefault();
 
     const text = itemDiv.querySelector('.item-text').textContent.trim();
-    const date = itemDiv.querySelector('.item-date').dataset.date; // ISO-формат для input
+    const date = itemDiv.querySelector('.item-date').dataset.date; // ISO
+    const percentage = itemDiv.querySelector('.item-percentage').dataset.percentage;
 
     itemDiv.innerHTML = `
     <span class="item-index"></span>
     <input type="text" class="edit-text-input" value="${text}" style="flex:1;">
     <input type="date" class="edit-date-input" value="${date}">
+    <input type="number" class="edit-progress-input" value="${percentage}">
     <button class="edit-save-btn">Сохранить</button>
     <button class="edit-cancel-btn">Отмена</button>
     `;
@@ -264,6 +268,7 @@ function startEditingItem(itemDiv) {
   itemDiv.querySelector('.edit-save-btn').addEventListener('click', () => {
     const newText = itemDiv.querySelector('.edit-text-input').value.trim();
     const newDate = itemDiv.querySelector('.edit-date-input').value;
+    const newPercentage = itemDiv.querySelector('.edit-progress-input').value;
 
     if (!newText || !newDate) {
       alert('Пожалуйста, заполните оба поля');
@@ -277,7 +282,7 @@ function startEditingItem(itemDiv) {
         'Content-Type': 'application/json',
         'X-CSRFToken': getCookie('csrftoken')
       },
-      body: JSON.stringify({text: newText, planned_date: newDate})
+      body: JSON.stringify({text: newText, planned_date: newDate, percentage: newPercentage})
     })
     .then(response => response.json())
     .then(data => {
@@ -288,7 +293,7 @@ function startEditingItem(itemDiv) {
       // Восстанавливаем draggable и drag события
       itemDiv.setAttribute('draggable', 'true');
       itemDiv.ondragstart = null;
-    itemDiv.innerHTML = renderChecklistItem(data)
+      itemDiv.innerHTML = renderChecklistItem(data)
       attachItemEventListeners(itemDiv);
       attachDragAndDropListeners(itemDiv);
       updateIndices();

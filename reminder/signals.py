@@ -40,7 +40,7 @@ def checklistitem_post_save(sender, instance, created, **kwargs):
         ChecklistItemHistory.objects.create(
             item=instance,
             action='moved',
-            details=f'Изменение приоритета: {old_priority_name} -> {new_priority_name}'
+            details=f'Приоритет: {old_priority_name} -> {new_priority_name}'
         )
     if old.text != instance.text:
         ChecklistItemHistory.objects.create(
@@ -48,12 +48,18 @@ def checklistitem_post_save(sender, instance, created, **kwargs):
             action='changed',
             details=f'Изменение текста: {old.text} -> {instance.text}'
         )
+    if old.percentage != instance.percentage and (instance.percentage not in (0, 100)):
+        ChecklistItemHistory.objects.create(
+            item=instance,
+            action='changed',
+            details=f'Завершенность: {old.percentage} -> {instance.percentage}'
+        )
     if old.planned_date != instance.planned_date:
         ChecklistItemHistory.objects.create(
             item=instance,
             action='changed',
             details=(
-                f'Изменение планируемой даты: '
+                f'Планируемая дата: '
                 f'{old.planned_date.isoformat()} -> {instance.planned_date.isoformat()}'
             )
         )

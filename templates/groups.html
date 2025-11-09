@@ -59,7 +59,7 @@
                   <div class="column-header">{{ column.priority.name }}</div>
                     {% for item in column.items %}
                       <div class="item{% if item.completed %} completed{% endif %}" data-id="{{ item.id }}">
-                        {{ forloop.counter }}. {{ item.text }} ({{ item.planned_date }})
+                        {{ forloop.counter }}. {{ item.text }} {% if item.percentage and not item.completed %}({{ item.percentage }}%){% endif %} ({{ item.planned_date }})
                       </div>
                     {% endfor %}
                 </div>

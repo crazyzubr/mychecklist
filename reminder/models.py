@@ -44,8 +44,8 @@ class ChecklistItem(models.Model):
     text = models.TextField('Текст')
     planned_date = models.DateField('Планируемая дата завершения')
     priority = models.ForeignKey('Priority', on_delete=models.PROTECT, verbose_name='Приоритет')
-    completed = models.BooleanField('Выполнено', default=False)
     archived = models.BooleanField('Архивирован', default=False)
+    percentage = models.PositiveIntegerField('Процент выполнения')
     order = models.PositiveIntegerField('Порядок', default=0)
     created_at = models.DateTimeField('Дата и время создания', auto_now_add=True)  # добавленное поле
 
@@ -55,6 +55,10 @@ class ChecklistItem(models.Model):
 
     def __str__(self):
         return f'{self.planned_date}: {self.text}'
+
+    @property
+    def completed(self):
+        return self.percentage >= 100
 
 
 class ChecklistItemHistory(models.Model):
