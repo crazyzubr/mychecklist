@@ -1,8 +1,7 @@
-from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from reminder.models import Priority, ChecklistItem
-import json
+from django.shortcuts import render
+from django.utils import timezone
+
+from reminder.models import ChecklistGroup, Priority, ChecklistItem
 
 
 def main_view(request):
@@ -28,42 +27,26 @@ def main_view(request):
         'items_by_priority': items_by_priority,
     })
 
-
-@require_POST
-def add_item(request):
-    data = json.loads(request.body)
-    text = data.get('text')
-    planned_date = data.get('planned_date')
-    priority_id = data.get('priority_id')
-    if not text or not planned_date or not priority_id:
-        return JsonResponse({'error': 'Недостаточно данных'}, status=400)
-    item = ChecklistItem.objects.create(
-        text=text,
-        planned_date=planned_date,
-        priority_id=priority_id,
-        completed=False,
-        archived=False,
-    )
-    return JsonResponse({
-        'id': item.id,
-        'text': item.text,
-        'planned_date': item.planned_date.strftime('%Y-%m-%d'),
-        'completed': item.completed,
-        'archived': item.archived,
-    })
-
-
-@require_POST
-def toggle_completed(request, item_id):
-    item = get_object_or_404(ChecklistItem, id=item_id, archived=False)
-    item.completed = not item.completed
-    item.save()
-    return JsonResponse({'completed': item.completed})
-
-
-@require_POST
-def remove_item(request, item_id):
-    item = get_object_or_404(ChecklistItem, id=item_id, archived=False)
-    item.archived = True
-    item.save()
-    return JsonResponse({'archived': True})
+def group_checklists_view(request):
+    now_date = timezone.now().date()
+    groups = ChecklistGroup.objects.all().order_by('from_date_index', 'end_date_index')
+    groups_data = []
+    for group in groups:
+        priorities = Priority.objects.all().order_by('level')
+        columns = []
+        for priority in priorities:
+            items = ChecklistItem.objects.filter(
+                planned_date__gte=group.date_from,
+                planned_date__lte=group.date_to,
+                priority=priority,
+                archived=False,
+            ).order_by('planned_date', 'created_at')
+            columns.append({
+                'priority': priority,
+                'items': items,
+            })
+        groups_data.append({
+            'group': group,
+            'columns': columns,
+        })
+    return render(request, 'groups.html', {'groups_data': groups_data})

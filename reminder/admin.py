@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from reminder.models import Priority, ChecklistItem, ChecklistItemHistory
+from reminder.models import Priority, ChecklistItem, ChecklistItemHistory, ChecklistGroup
 
 
 @admin.register(Priority)
@@ -22,3 +22,8 @@ class ChecklistItemAdmin(admin.ModelAdmin):
     list_filter = ('priority', 'created_at')
     search_fields = ('text',)
     date_hierarchy = 'created_at'
+
+
+@admin.register(ChecklistGroup)
+class ChecklistGroupAdmin(admin.ModelAdmin):
+    pass

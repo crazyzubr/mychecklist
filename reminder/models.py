@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import models
 from django.utils import timezone
 
@@ -13,6 +15,29 @@ class Priority(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.level})'
+
+
+class ChecklistGroup(models.Model):
+    name = models.CharField('Название', max_length=100, unique=True)
+    from_date_index = models.PositiveIntegerField('Сдвиг даты от')
+    end_date_index = models.PositiveIntegerField('Сдвиг до даты')
+
+    class Meta:
+        verbose_name = 'Группа чеклистов'
+        verbose_name_plural = 'Группы чеклистов'
+        ordering = ['from_date_index', 'end_date_index']
+        unique_together = ('from_date_index', 'end_date_index')
+
+    def __str__(self):
+        return f'{self.name} ({self.date_from} - {self.date_to})'
+
+    @property
+    def date_from(self):
+        return (timezone.now() + timedelta(days=self.from_date_index)).date()
+
+    @property
+    def date_to(self):
+        return (timezone.now() + timedelta(days=self.end_date_index)).date()
 
 
 class ChecklistItem(models.Model):

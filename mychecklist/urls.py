@@ -23,5 +23,6 @@ from mychecklist import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.main_view, name='main_view'),
+    path('groups', views.group_checklists_view, name='groups_view'),
     path('api/', include('reminder.urls')),
 ]

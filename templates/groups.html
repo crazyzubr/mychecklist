@@ -1,0 +1,71 @@
+{% extends 'index.html' %}
+
+{% block styles %}
+    <style>
+        .groups-container {
+          display: flex;
+          flex-direction: column;
+          gap: 40px;
+          padding: 20px;
+        }
+        .group {
+          border: 1px solid #ccc;
+          padding: 15px;
+        }
+        .group-title {
+          font-size: 1.5em;
+          margin-bottom: 10px;
+        }
+        .columns {
+          display: flex;
+          gap: 15px;
+        }
+        .column {
+          flex: 1;
+          border: 1px solid #999;
+          padding: 10px;
+          box-sizing: border-box;
+        }
+        .column-header {
+          font-weight: bold;
+          margin-bottom: 8px;
+        }
+        .item {
+          padding: 4px 8px;
+          border-bottom: 1px solid #ddd;
+          white-space: nowrap;
+        }
+        .item.completed {
+          text-decoration: line-through;
+          color: gray;
+        }
+        .empty-message {
+          font-style: italic;
+          color: #888;
+        }
+      </style>
+{% endblock %}
+
+{% block container %}
+    {% for group_data in groups_data %}
+      <div class="group" data-group-id="{{ group_data.group.id }}">
+        <div class="group-title">
+          {{ group_data.group.name }} ({{ group_data.group.date_from }} &mdash; {{ group_data.group.date_to }})
+        </div>
+        <div class="columns">
+          {% for column in group_data.columns %}
+              {% if column.items %}
+                <div class="column" data-priority-id="{{ column.priority.id }}">
+                  <div class="column-header">{{ column.priority.name }}</div>
+                    {% for item in column.items %}
+                      <div class="item{% if item.completed %} completed{% endif %}" data-id="{{ item.id }}">
+                        {{ forloop.counter }}. {{ item.text }} ({{ item.planned_date }})
+                      </div>
+                    {% endfor %}
+                </div>
+              {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+{% endblock %}

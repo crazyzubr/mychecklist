@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Чеклист</title>
+    {% block styles %}
   <style>
       .container {
         display: flex;
@@ -83,13 +84,16 @@
 
 
   </style>
+    {% endblock %}
 </head>
 <body>
 <div class="menu-list">
+    {% block menu_items %}
     <a href="/">Главная</a> | <a href="/groups">По группам дат</a>
+    {% endblock %}
 </div>
 <div class="container">
-
+{% block container %}
   {% for priority in priorities %}
     <div class="column" data-priority-id="{{ priority.id }}" data-priority-level="{{ priority.level }}">
       <h2>{{ priority.name }}</h2>
@@ -118,9 +122,11 @@
       </div>
     </div>
   {% endfor %}
+{% endblock %}
 </div>
 
+{% block footer_scripts %}
 <script src="{% static 'js/reminder.js' %}"></script>
-
+{% endblock %}
 </body>
 </html>
