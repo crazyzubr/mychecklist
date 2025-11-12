@@ -67,7 +67,7 @@ class ChecklistItemMoveView(APIView):
         data = request.data
         item_id = data.get('id')
         new_priority_id = data.get('priority')
-        new_order = data.get('order')
+        new_order = data.get('order') or 5000
 
         if item_id is None or new_priority_id is None or new_order is None:
             return Response({'error': 'id, priority и order обязательны'}, status=status.HTTP_400_BAD_REQUEST)

@@ -1,62 +1,51 @@
-<script>
-import AddChecklistItem from './buttons/AddChecklistItemForm.vue'
-import ChecklistCheckbox from './buttons/ChecklistToggled.vue'
-import ChecklistArchivedButton from './buttons/ChecklistArchived.vue'
-import ChecklistEditButton from './buttons/ChecklistEdit.vue'
-</script>
-
 <template>
-  <div>
-    <div class="container">
-      <div v-for="group in checklist" :key="group.priority.id" class="priority-group">
-        <div class="header">
-          <AddChecklistItem
-            :priorityId="group.priority.id"
-            @itemAdded="item => group.items.unshift(item)"
-          />
-          <h2>{{ group.priority.name }}</h2>
-        </div>
-        <ul class="checklist">
-          <li
-            v-for="item in group.items || []"
-            :key="item.id"
-            :class="{ completed: item.completed }"
-            class="checklist-item"
-          >
-            <ChecklistCheckbox
-              :itemId="item.id"
-              v-model="item.completed"
-              @toggled="handleToggle(item)"
-            />
-            <draggable
-              v-model="group.items"
-              :group="'checklist'"
-              class="draggable-item"
-              item-key="id"
-              @end="onDragEnd"
-            >
-              <span>
-                {{ item.text }}
-                <em style="margin-left: 0.5rem;">{{ item.planned_date }}</em>
-                <span v-if="item.percentage !== 0 && item.percentage !== 100" class="percentage">({{ item.percentage }}%)</span>
-              </span>
-            </draggable>
-            <ChecklistEditButton :item="item" @updated="onItemUpdated" />
-            <ChecklistArchivedButton
-              :itemId="item.id"
-              :itemName="item.text"
-              @archived="onItemArchived"
-            />
-          </li>
-        </ul>
+  <div class="container">
+    <div v-for="group in checklist" :key="group.priority.id" class="priority-group"
+         @dragover="onDragOver" @drop="onDrop($event, group)">
+      <div class="header">
+        <AddChecklistItem
+          :priorityId="group.priority.id"
+          @itemAdded="item => group.items.unshift(item)"
+        />
+        <h2>{{ group.priority.name }} ({{ group.items.length }})</h2>
       </div>
+
+      <ul class="checklist">
+        <li
+          v-for="item in group.items"
+          :key="item.id"
+          :class="{ completed: item.completed }"
+          class="checklist-item"
+          :data-id="item.id"
+          draggable="true"
+          @dragstart="onDragStart($event, item)"
+        >
+          <ChecklistCheckbox
+            :itemId="item.id"
+            v-model="item.completed"
+            @toggled="handleToggle(item)"
+          />
+          <span>
+            {{ item.text }}
+            <em style="margin-left: 0.5rem;">{{ item.planned_date }}</em>
+            <span v-if="item.percentage !== 0 && item.percentage !== 100" class="percentage">
+              ({{ item.percentage }}%)
+            </span>
+          </span>
+          <ChecklistEditButton :item="item" @updated="onItemUpdated" />
+          <ChecklistArchivedButton :itemId="item.id" :itemName="item.text" @archived="onItemArchived" />
+        </li>
+      </ul>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { VueDraggableNext as draggable } from 'vue-draggable-next'
+import AddChecklistItem from './buttons/AddChecklistItemForm.vue'
+import ChecklistCheckbox from './buttons/ChecklistToggled.vue'
+import ChecklistArchivedButton from './buttons/ChecklistArchived.vue'
+import ChecklistEditButton from './buttons/ChecklistEdit.vue'
 
 const checklist = ref([])
 
@@ -65,9 +54,8 @@ async function fetchChecklist() {
     const res = await fetch('/api/v1/checklist')
     if (res.ok) {
       const data = await res.json()
+      console.log('Загруженные данные:', data)
       checklist.value = data
-    } else {
-      console.error('Ошибка загрузки чеклиста', res.status)
     }
   } catch (error) {
     console.error('Ошибка запроса чеклиста', error)
@@ -127,7 +115,7 @@ async function onDragEnd(evt) {
 
     if (!draggedElementId || !newPriorityId) return;
 
-    const res = await fetch('/api/checklist/item/move', {
+    const res = await fetch('/api/v1/checklist/item/move', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -142,7 +130,46 @@ async function onDragEnd(evt) {
     alert('Ошибка перемещения');
   }
 }
-  
+
+let draggedItem = null
+
+function onDragStart(event, item) {
+  draggedItem = item
+  event.dataTransfer.setData('text/plain', item.id)
+  event.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragOver(event) {
+  event.preventDefault()
+  event.dataTransfer.dropEffect = 'move'
+}
+
+function onDrop(event, targetGroup) {
+  event.preventDefault()
+  if (!draggedItem) return
+
+  const itemId = parseInt(event.dataTransfer.getData('text/plain'))
+  const sourceGroup = checklist.value.find(g =>
+    g.items.some(item => item.id === itemId)
+  )
+
+  if (sourceGroup && sourceGroup.priority.id !== targetGroup.priority.id) {
+    const itemIndex = sourceGroup.items.findIndex(item => item.id === itemId)
+    if (itemIndex !== -1) {
+      const [movedItem] = sourceGroup.items.splice(itemIndex, 1)
+      targetGroup.items.push(movedItem)
+
+      // Вызываем API для сохранения
+      onDragEnd({
+        item: { getAttribute: () => movedItem.id.toString() },
+        to: { getAttribute: () => targetGroup.priority.id.toString() }
+      })
+    }
+  }
+
+  draggedItem = null
+}
+
 </script>
 
 <style scoped>
@@ -151,56 +178,39 @@ async function onDragEnd(evt) {
   gap: 1.5rem;
   flex-wrap: wrap;
 }
-.header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: 0.5rem;
-}
+
 .priority-group {
   flex: 1 1 300px;
   border: 1px solid #ccc;
   padding: 1rem;
   margin-bottom: 1.5rem;
-}
-.checklist {
-  padding-inline-start: 0.25rem;
-}
-.draggable-item {
-  display: inline;
-}
-.checklist-item {
-  list-style: none;
-  margin: 0.5rem 0;
-  color: black;
-  padding-left: 0;
-  text-align: left;
-}
-.percentage {
-  color: #747bff;
-  margin-left: 0.5rem;
-}
-.checklist-item.completed {
-  color: gray;
-  text-decoration: line-through;
+  min-height: 200px;
 }
 
-.checklist-item label {
-  cursor: pointer;
+.checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  min-height: 100px;
 }
-.priority-columns {
+
+.checklist-item {
   display: flex;
-  gap: 1rem;
-}
-.priority-group {
-  flex: 1;
-  border: 1px solid #ccc;
-  padding: 1rem;
-}
-.drag-handle {
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
   cursor: grab;
-  margin-right: 0.5rem;
-  font-style: italic;
-  color: #555;
+}
+
+.checklist-item:active {
+  cursor: grabbing;
+}
+
+.sortable-chosen {
+  background: #f0f0f0;
 }
 </style>
