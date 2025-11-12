@@ -29,7 +29,6 @@ class ChecklistMainView(APIView):
 class ChecklistItemCreateView(APIView):
 
     def post(self, request):
-        print(request.data)
         serializer = ChecklistItemSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(archived=False)
