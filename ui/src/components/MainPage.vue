@@ -178,39 +178,56 @@ function onDrop(event, targetGroup) {
   gap: 1.5rem;
   flex-wrap: wrap;
 }
-
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 0.5rem;
+}
 .priority-group {
   flex: 1 1 300px;
   border: 1px solid #ccc;
   padding: 1rem;
   margin-bottom: 1.5rem;
-  min-height: 200px;
 }
-
 .checklist {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  min-height: 100px;
+  padding-inline-start: 0.25rem;
 }
-
+.draggable-item {
+  display: inline;
+}
 .checklist-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  list-style: none;
   margin: 0.5rem 0;
-  padding: 0.5rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  background: white;
+  color: black;
+  padding-left: 0;
+  text-align: left;
+}
+.percentage {
+  color: #747bff;
+  margin-left: 0.5rem;
+}
+.checklist-item.completed {
+  color: gray;
+  text-decoration: line-through;
+}
+
+.checklist-item label {
+  cursor: pointer;
+}
+.priority-columns {
+  display: flex;
+  gap: 1rem;
+}
+.priority-group {
+  flex: 1;
+  border: 1px solid #ccc;
+  padding: 1rem;
+}
+.drag-handle {
   cursor: grab;
-}
-
-.checklist-item:active {
-  cursor: grabbing;
-}
-
-.sortable-chosen {
-  background: #f0f0f0;
+  margin-right: 0.5rem;
+  font-style: italic;
+  color: #555;
 }
 </style>
