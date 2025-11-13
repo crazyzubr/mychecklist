@@ -1,10 +1,14 @@
+from datetime import timedelta
+
 from django.db import transaction
 from django.db.models import F
+from django.forms import model_to_dict
+from django.utils import timezone
 from rest_framework.renderers import JSONRenderer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Priority, ChecklistItem
+from .models import Priority, ChecklistItem, ChecklistGroup
 from .serializers import ChecklistItemSerializer
 from django.shortcuts import get_object_or_404
 
@@ -16,14 +20,47 @@ class ChecklistMainView(APIView):
         priorities = Priority.objects.order_by('level')
         data = []
         for priority in priorities:
-            items = ChecklistItem.objects.filter(
-                priority=priority, archived=False).order_by('percentage')
+            items = (
+                ChecklistItem.objects
+                .filter(priority=priority, archived=False)
+                .filter(planned_date__gte=timezone.now() - timedelta(days=7))
+                .order_by('percentage', 'planned_date')
+            )
             serializer = ChecklistItemSerializer(items, many=True)
             data.append({
                 'priority': {'id': priority.id, 'name': priority.name, 'level': priority.level},
                 'items': serializer.data,
             })
         return Response(data, content_type='application/json')
+
+
+class ChecklistByDatesView(APIView):
+    renderer_classes = [JSONRenderer]
+
+    def get(self, request):
+        now_date = timezone.now().date()
+        groups = ChecklistGroup.objects.all().order_by(
+            'from_date_index', 'end_date_index')
+        groups_data = []
+        for group in groups:
+            priorities = Priority.objects.all().order_by('level')
+            columns = []
+            for priority in priorities:
+                items = ChecklistItem.objects.filter(
+                    planned_date__gte=group.date_from,
+                    planned_date__lte=group.date_to,
+                    priority=priority,
+                    archived=False,
+                ).order_by('planned_date', 'created_at')
+                columns.append({
+                    'priority': model_to_dict(priority),
+                    'items': [model_to_dict(item) for item in items],
+                })
+            groups_data.append({
+                'group': model_to_dict(group),
+                'columns': columns,
+            })
+        return Response(groups_data, content_type='application/json')
 
 
 class ChecklistItemCreateView(APIView):

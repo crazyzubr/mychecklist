@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    ChecklistByDatesView,
     ChecklistMainView,
     ChecklistItemCreateView,
     ChecklistItemToggleCompletedView,
@@ -11,6 +12,8 @@ from .views import (
 urlpatterns = [
     path('checklist', ChecklistMainView.as_view(),
          name='checklist-main'),
+    path('checklist/by-dates', ChecklistByDatesView.as_view(),
+         name='checklist-by-dates'),
     path('checklist/item', ChecklistItemCreateView.as_view(),
          name='checklist-item-create'),
     path('checklist/item/move', ChecklistItemMoveView.as_view(),

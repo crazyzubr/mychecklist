@@ -1,19 +1,20 @@
 <script setup>
-import MainPage from './components/MainPage.vue'
+import { RouterLink, RouterView } from 'vue-router'
 </script>
 
 <template>
   <nav class="top-menu">
-    <a href="#" class="menu-link">Главная</a>
-    <a href="#" class="menu-link">По датам</a>
+    <RouterLink to="/" class="menu-link" exact>Главная</RouterLink>
+    <RouterLink to="/by-dates" class="menu-link">По датам</RouterLink>
   </nav>
-  <MainPage />
+  <RouterView />
 </template>
 
 <style>
 :root {
   color-scheme: light !important;
 }
+
 .top-menu {
   display: flex;
   gap: 1rem;
@@ -31,5 +32,9 @@ import MainPage from './components/MainPage.vue'
 
 .menu-link:hover {
   color: #747bff;
+}
+
+.menu-link.router-link-exact-active {
+  text-decoration: underline;
 }
 </style>

@@ -42,10 +42,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import AddChecklistItem from './buttons/AddChecklistItemForm.vue'
-import ChecklistCheckbox from './buttons/ChecklistToggled.vue'
-import ChecklistArchivedButton from './buttons/ChecklistArchived.vue'
-import ChecklistEditButton from './buttons/ChecklistEdit.vue'
+import AddChecklistItem from '../components/buttons/AddChecklistItemForm.vue'
+import ChecklistCheckbox from '../components/buttons/ChecklistToggled.vue'
+import ChecklistArchivedButton from '../components/buttons/ChecklistArchived.vue'
+import ChecklistEditButton from '../components/buttons/ChecklistEdit.vue'
 
 const checklist = ref([])
 
