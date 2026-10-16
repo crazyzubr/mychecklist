@@ -1,3 +1,4 @@
+import time
 from datetime import timedelta
 
 from django.db import transaction
@@ -51,10 +52,12 @@ class ChecklistByDatesView(APIView):
                     planned_date__lte=group.date_to,
                     priority=priority,
                     archived=False,
-                ).order_by('planned_date', 'created_at')
+                ).order_by('percentage', 'planned_date', 'created_at')
                 columns.append({
                     'priority': model_to_dict(priority),
-                    'items': [model_to_dict(item) for item in items],
+                    'items': [
+                        {**model_to_dict(item), **dict(completed=item.completed)}
+                        for item in items],
                 })
             groups_data.append({
                 'group': model_to_dict(group),

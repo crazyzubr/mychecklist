@@ -6,7 +6,6 @@ from reminder.models import ChecklistGroup, Priority, ChecklistItem
 
 def main_view(request):
     priorities = Priority.objects.order_by('level')
-    # Для каждой колонки берем активные (неархивированные) элементы
     checklist_items = (
         ChecklistItem.objects
         .filter(archived=False)
@@ -28,7 +27,6 @@ def main_view(request):
     })
 
 def group_checklists_view(request):
-    now_date = timezone.now().date()
     groups = ChecklistGroup.objects.all().order_by('from_date_index', 'end_date_index')
     groups_data = []
     for group in groups:

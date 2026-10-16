@@ -172,58 +172,63 @@ function onDrop(event, targetGroup) {
 
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .container {
   display: flex;
   gap: 1.5rem;
   flex-wrap: wrap;
+
+  .priority-group {
+    flex: 1 1 300px;
+    border: 1px solid #ccc;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: 0.5rem;
+    }
+
+    .checklist {
+      padding-inline-start: 0.25rem;
+
+      .checklist-item {
+        list-style: none;
+        margin: 0.5rem 0;
+        color: black;
+        padding-left: 0;
+        text-align: left;
+        display: flex; // Если нужно, можно добавить для разметки элементов
+
+        &.completed {
+          color: gray;
+          text-decoration: line-through;
+        }
+
+        label {
+          cursor: pointer;
+        }
+      }
+    }
+  }
 }
-.header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: 0.5rem;
-}
-.priority-group {
-  flex: 1 1 300px;
-  border: 1px solid #ccc;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-}
-.checklist {
-  padding-inline-start: 0.25rem;
-}
+
 .draggable-item {
-  display: inline;
+  display: inline-block;
 }
-.checklist-item {
-  list-style: none;
-  margin: 0.5rem 0;
-  color: black;
-  padding-left: 0;
-  text-align: left;
-}
+
 .percentage {
   color: #747bff;
   margin-left: 0.5rem;
 }
-.checklist-item.completed {
-  color: gray;
-  text-decoration: line-through;
-}
 
-.checklist-item label {
-  cursor: pointer;
-}
 .priority-columns {
   display: flex;
   gap: 1rem;
 }
-.priority-group {
-  flex: 1;
-  border: 1px solid #ccc;
-  padding: 1rem;
-}
+
 .drag-handle {
   cursor: grab;
   margin-right: 0.5rem;
